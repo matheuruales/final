@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Proyectos{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Listado de proyectos</h1>
+        {% if is_estudiante %}
+            <p class="text-muted mb-0">Aqui puedes gestionar unicamente los proyectos registrados por tu usuario.</p>
+        {% else %}
+            <p class="text-muted mb-0">Aqui puedes revisar los proyectos academicos registrados por los estudiantes.</p>
+        {% endif %}
+    </div>
+    {% if is_estudiante %}
+        <a href="{% url 'proyecto_crear' %}" class="btn btn-primary">Nuevo proyecto</a>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if proyectos %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Titulo</th>
+                            {% if is_docente %}
+                                <th>Estudiante</th>
+                            {% endif %}
+                            <th>Estado</th>
+                            <th>Fecha de envio</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proyecto in proyectos %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ proyecto.titulo }}</div>
+                                    <div class="text-muted small">{{ proyecto.descripcion|truncatechars:80 }}</div>
+                                </td>
+                                {% if is_docente %}
+                                    <td>{{ proyecto.estudiante.get_full_name|default:proyecto.estudiante.username }}</td>
+                                {% endif %}
+                                <td>
+                                    {% if proyecto.estado == 'aprobado' %}
+                                        <span class="badge text-bg-success">{{ proyecto.get_estado_display }}</span>
+                                    {% elif proyecto.estado == 'en_revision' %}
+                                        <span class="badge text-bg-warning">{{ proyecto.get_estado_display }}</span>
+                                    {% elif proyecto.estado == 'rechazado' %}
+                                        <span class="badge text-bg-danger">{{ proyecto.get_estado_display }}</span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">{{ proyecto.get_estado_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ proyecto.fecha_envio|date:"d/m/Y H:i" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'proyecto_detalle' proyecto.pk %}" class="btn btn-outline-primary btn-sm">Ver</a>
+                                    {% if is_estudiante %}
+                                        <a href="{% url 'proyecto_editar' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+                                        <a href="{% url 'proyecto_eliminar' proyecto.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+                                    {% endif %}
+                                    {% if is_docente %}
+                                        <a href="{% url 'proyecto_revision' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Revisar</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-4 text-center text-muted">
+                <p class="mb-3">Aun no hay proyectos registrados para mostrar.</p>
+                {% if is_estudiante %}
+                    <a href="{% url 'proyecto_crear' %}" class="btn btn-primary">Crear mi primer proyecto</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

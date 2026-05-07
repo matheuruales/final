@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Revision del proyecto{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <a href="{% url 'proyecto_detalle' proyecto.pk %}" class="text-decoration-none small">&larr; Volver al detalle</a>
+                <h1 class="h3 mt-2 mb-1">Revision del proyecto</h1>
+                <p class="text-muted mb-4">{{ proyecto.titulo }}</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">Guardar revision</button>
+                        <a href="{% url 'proyecto_detalle' proyecto.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -37,9 +37,11 @@
             <div class="card-body">
                 <h2 class="h5">Permisos esperados</h2>
                 {% if is_estudiante %}
-                    <p class="mb-0">Podra gestionar solo sus propios proyectos en la siguiente fase.</p>
+                    <p class="mb-3">Podra gestionar solo sus propios proyectos en la siguiente fase.</p>
+                    <a href="{% url 'proyecto_lista' %}" class="btn btn-primary btn-sm">Ir a mis proyectos</a>
                 {% elif is_docente %}
-                    <p class="mb-0">Podra revisar y calificar proyectos en la siguiente fase.</p>
+                    <p class="mb-3">Podra revisar y calificar proyectos en la siguiente fase.</p>
+                    <a href="{% url 'proyecto_lista' %}" class="btn btn-primary btn-sm">Ver proyectos</a>
                 {% else %}
                     <p class="mb-0">Asigna el grupo Estudiante o Docente desde el panel administrativo.</p>
                 {% endif %}
