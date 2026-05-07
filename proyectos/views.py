@@ -4,11 +4,16 @@ from django.core.mail import send_mail
 from django.db.models import Q
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, FormView, ListView, UpdateView
 from django.views.generic.detail import SingleObjectMixin
+
+import csv
+import io
 
 from core.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
 from core.mixins import StudentRequiredMixin, TeacherRequiredMixin
@@ -132,6 +137,141 @@ class ProyectoListView(ProyectoRoleMixin, ListView):
                 .order_by('first_name', 'last_name', 'username')
             )
         return context
+
+
+class ProyectoExportCsvView(ProyectoRoleMixin, View):
+    def get(self, request, *args, **kwargs):
+        proyectos = self.filter_projects_queryset(self.get_project_queryset())
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        fecha = timezone.localdate().strftime('%Y%m%d')
+        response['Content-Disposition'] = f'attachment; filename="proyectos_{fecha}.csv"'
+        response.write('\ufeff')
+
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                'Titulo',
+                'Estudiante',
+                'Estado',
+                'Fecha envio',
+                'Fecha revision',
+                'Calificacion',
+                'Documento',
+            ]
+        )
+
+        for proyecto in proyectos:
+            writer.writerow(
+                [
+                    proyecto.titulo,
+                    proyecto.estudiante.get_full_name() or proyecto.estudiante.username,
+                    proyecto.get_estado_display(),
+                    timezone.localtime(proyecto.fecha_envio).strftime('%d/%m/%Y %H:%M'),
+                    timezone.localtime(proyecto.fecha_revision).strftime('%d/%m/%Y %H:%M')
+                    if proyecto.fecha_revision
+                    else '',
+                    str(proyecto.calificacion) if proyecto.calificacion is not None else '',
+                    proyecto.documento.name,
+                ]
+            )
+
+        return response
+
+
+class ProyectoExportPdfView(ProyectoRoleMixin, View):
+    def get(self, request, *args, **kwargs):
+        try:
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import landscape, letter
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.platypus import (
+                Paragraph,
+                SimpleDocTemplate,
+                Spacer,
+                Table,
+                TableStyle,
+            )
+        except ImportError:
+            messages.error(
+                request,
+                'No se pudo generar el PDF porque falta la dependencia "reportlab". '
+                'Instala las dependencias del proyecto nuevamente.',
+            )
+            return redirect('proyecto_lista')
+
+        proyectos = list(self.filter_projects_queryset(self.get_project_queryset()))
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(letter),
+            leftMargin=24,
+            rightMargin=24,
+            topMargin=24,
+            bottomMargin=24,
+            title='Reporte de proyectos',
+        )
+
+        styles = getSampleStyleSheet()
+        elements = []
+        elements.append(Paragraph('Reporte de proyectos academicos', styles['Title']))
+        elements.append(
+            Paragraph(
+                f'Generado: {timezone.localtime(timezone.now()).strftime(\"%d/%m/%Y %H:%M\")}',
+                styles['Normal'],
+            )
+        )
+        elements.append(Spacer(1, 12))
+
+        data = [
+            [
+                'Titulo',
+                'Estudiante',
+                'Estado',
+                'Envio',
+                'Revision',
+                'Calificacion',
+            ]
+        ]
+        for proyecto in proyectos:
+            data.append(
+                [
+                    proyecto.titulo,
+                    proyecto.estudiante.get_full_name() or proyecto.estudiante.username,
+                    proyecto.get_estado_display(),
+                    timezone.localtime(proyecto.fecha_envio).strftime('%d/%m/%Y'),
+                    timezone.localtime(proyecto.fecha_revision).strftime('%d/%m/%Y')
+                    if proyecto.fecha_revision
+                    else '—',
+                    str(proyecto.calificacion) if proyecto.calificacion is not None else '—',
+                ]
+            )
+
+        table = Table(data, repeatRows=1)
+        table.setStyle(
+            TableStyle(
+                [
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d6efd')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
+                    ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                    ('TOPPADDING', (0, 0), (-1, 0), 8),
+                ]
+            )
+        )
+        elements.append(table)
+
+        doc.build(elements)
+        buffer.seek(0)
+
+        fecha = timezone.localdate().strftime('%Y%m%d')
+        return FileResponse(buffer, as_attachment=True, filename=f'proyectos_{fecha}.pdf')
 
 
 class ProyectoDetailView(ProyectoRoleMixin, DetailView):

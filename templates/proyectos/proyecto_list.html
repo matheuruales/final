@@ -16,6 +16,18 @@
         {% if is_estudiante %}
             <a href="{% url 'proyecto_crear' %}" class="btn btn-primary">Nuevo proyecto</a>
         {% endif %}
+        <a
+            href="{% url 'proyecto_export_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+            class="btn btn-outline-secondary"
+        >
+            Exportar CSV
+        </a>
+        <a
+            href="{% url 'proyecto_export_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+            class="btn btn-outline-secondary"
+        >
+            Exportar PDF
+        </a>
     </div>
 </div>
 
