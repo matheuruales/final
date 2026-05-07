@@ -22,10 +22,9 @@ def validate_project_document(value):
 
 class Proyecto(models.Model):
     class Estado(models.TextChoices):
-        PENDIENTE = 'pendiente', 'Pendiente'
-        EN_REVISION = 'en_revision', 'En revision'
+        ENVIADO = 'enviado', 'Enviado'
+        REVISION = 'revision', 'En Revisión'
         APROBADO = 'aprobado', 'Aprobado'
-        RECHAZADO = 'rechazado', 'Rechazado'
 
     titulo = models.CharField(max_length=200)
     descripcion = models.TextField()
@@ -41,7 +40,7 @@ class Proyecto(models.Model):
     estado = models.CharField(
         max_length=20,
         choices=Estado.choices,
-        default=Estado.PENDIENTE,
+        default=Estado.ENVIADO,
     )
     fecha_envio = models.DateTimeField(auto_now_add=True)
     fecha_revision = models.DateTimeField(blank=True, null=True)

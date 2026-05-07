@@ -3,7 +3,7 @@ from django.apps import AppConfig
 
 class CoreConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'core'
+    name = 'core_matheu'
 
     def ready(self):
-        import core.signals  # noqa: F401
+        import core_matheu.signals  # noqa: F401

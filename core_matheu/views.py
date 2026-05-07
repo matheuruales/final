@@ -20,5 +20,5 @@ class DashboardView(TemplateView):
         user = self.request.user
         group_names = set(user.groups.values_list('name', flat=True))
         context['is_estudiante'] = ESTUDIANTE_GROUP in group_names
-        context['is_docente'] = DOCENTE_GROUP in group_names
+        context['is_docente'] = DOCENTE_GROUP in group_names or user.is_staff or user.is_superuser
         return context

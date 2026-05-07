@@ -9,7 +9,10 @@ class GroupRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     allowed_groups = ()
 
     def test_func(self):
-        return self.request.user.groups.filter(name__in=self.allowed_groups).exists()
+        user = self.request.user
+        if DOCENTE_GROUP in self.allowed_groups and (user.is_staff or user.is_superuser):
+            return True
+        return user.groups.filter(name__in=self.allowed_groups).exists()
 
     def handle_no_permission(self):
         messages.error(self.request, 'No tienes permisos para acceder a esta seccion.')

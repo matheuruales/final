@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('titulo', models.CharField(max_length=200)),
                 ('descripcion', models.TextField()),
                 ('documento', models.FileField(upload_to='proyectos/documentos/')),
-                ('estado', models.CharField(choices=[('pendiente', 'Pendiente'), ('en_revision', 'En revision'), ('aprobado', 'Aprobado'), ('rechazado', 'Rechazado')], default='pendiente', max_length=20)),
+                ('estado', models.CharField(choices=[('enviado', 'Enviado'), ('revision', 'En Revisión'), ('aprobado', 'Aprobado')], default='enviado', max_length=20)),
                 ('fecha_envio', models.DateTimeField(auto_now_add=True)),
                 ('fecha_revision', models.DateTimeField(blank=True, null=True)),
                 ('calificacion', models.DecimalField(blank=True, decimal_places=2, max_digits=4, null=True, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(5)])),

@@ -4,7 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from core.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
+from core_matheu.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
 
 from .models import Comentario, Proyecto
 
@@ -21,7 +21,7 @@ class ProyectoModelTests(TestCase):
             documento=documento,
         )
 
-        self.assertEqual(proyecto.estado, Proyecto.Estado.PENDIENTE)
+        self.assertEqual(proyecto.estado, Proyecto.Estado.ENVIADO)
         self.assertEqual(proyecto.estudiante, estudiante)
 
 
@@ -52,11 +52,25 @@ class ProyectoViewsTests(TestCase):
         )
         self.teacher.groups.add(self.teacher_group)
 
+        self.admin = User.objects.create_user(
+            username='admin1',
+            password='ClaveSegura123',
+            email='admin1@example.com',
+            is_staff=True,
+        )
+
         self.project = Proyecto.objects.create(
             titulo='Proyecto de grado',
             descripcion='Descripcion inicial del proyecto',
             estudiante=self.student,
             documento=self.make_file('propuesta.pdf'),
+        )
+        self.other_project = Proyecto.objects.create(
+            titulo='Proyecto externo',
+            descripcion='Proyecto de otro estudiante',
+            estudiante=self.other_student,
+            estado=Proyecto.Estado.REVISION,
+            documento=self.make_file('externo.pdf'),
         )
 
     def make_file(self, name='archivo.pdf', content=b'contenido'):
@@ -74,12 +88,15 @@ class ProyectoViewsTests(TestCase):
             },
         )
 
-        new_project = Proyecto.objects.exclude(pk=self.project.pk).get()
+        new_project = Proyecto.objects.exclude(
+            pk__in=[self.project.pk, self.other_project.pk]
+        ).get()
         self.assertRedirects(
             response,
             reverse('proyecto_detalle', kwargs={'pk': new_project.pk}),
         )
         self.assertEqual(new_project.estudiante, self.student)
+        self.assertEqual(new_project.estado, Proyecto.Estado.ENVIADO)
 
     def test_project_list_requires_login(self):
         response = self.client.get(reverse('proyecto_lista'))
@@ -94,6 +111,14 @@ class ProyectoViewsTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+    def test_student_list_does_not_show_other_students_projects(self):
+        self.client.login(username='estudiante1', password='ClaveSegura123')
+
+        response = self.client.get(reverse('proyecto_lista'))
+
+        self.assertContains(response, 'Proyecto de grado')
+        self.assertNotContains(response, 'Proyecto externo')
 
     def test_teacher_can_update_revision(self):
         self.client.login(username='docente1', password='ClaveSegura123')
@@ -114,6 +139,63 @@ class ProyectoViewsTests(TestCase):
         self.assertEqual(self.project.estado, Proyecto.Estado.APROBADO)
         self.assertEqual(str(self.project.calificacion), '4.50')
         self.assertIsNotNone(self.project.fecha_revision)
+
+    def test_staff_admin_can_update_revision(self):
+        self.client.login(username='admin1', password='ClaveSegura123')
+
+        response = self.client.post(
+            reverse('proyecto_revision', kwargs={'pk': self.project.pk}),
+            {
+                'estado': Proyecto.Estado.REVISION,
+                'calificacion': '4.00',
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('proyecto_detalle', kwargs={'pk': self.project.pk}),
+        )
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.estado, Proyecto.Estado.REVISION)
+        self.assertEqual(str(self.project.calificacion), '4.00')
+
+    def test_teacher_can_filter_by_state_and_student(self):
+        self.client.login(username='docente1', password='ClaveSegura123')
+
+        response = self.client.get(
+            reverse('proyecto_lista'),
+            {
+                'estado': Proyecto.Estado.REVISION,
+                'estudiante': str(self.other_student.pk),
+            },
+        )
+
+        self.assertContains(response, 'Proyecto externo')
+        self.assertNotContains(response, 'Proyecto de grado')
+
+    def test_export_csv_respects_filters(self):
+        self.client.login(username='docente1', password='ClaveSegura123')
+
+        response = self.client.get(
+            reverse('proyecto_export_csv'),
+            {'estado': Proyecto.Estado.REVISION},
+        )
+
+        content = response.content.decode('utf-8-sig')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('text/csv', response['Content-Type'])
+        self.assertIn('Proyecto externo', content)
+        self.assertNotIn('Proyecto de grado', content)
+
+    def test_export_pdf_returns_pdf_file(self):
+        self.client.login(username='docente1', password='ClaveSegura123')
+
+        response = self.client.get(reverse('proyecto_export_pdf'))
+
+        content = b''.join(response.streaming_content)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(content.startswith(b'%PDF'))
 
     def test_approved_project_blocks_new_comments(self):
         self.project.estado = Proyecto.Estado.APROBADO
@@ -145,6 +227,11 @@ class ProyectoViewsTests(TestCase):
             reverse('proyecto_detalle', kwargs={'pk': self.project.pk}),
         )
         self.assertEqual(Comentario.objects.count(), 1)
+        comentario = Comentario.objects.get()
+        self.assertEqual(comentario.usuario, self.teacher)
+        self.assertEqual(comentario.proyecto, self.project)
+        self.assertEqual(comentario.texto, 'Recuerda complementar el marco teorico.')
+        self.assertIsNotNone(comentario.fecha)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ['estudiante1@example.com'])
 
