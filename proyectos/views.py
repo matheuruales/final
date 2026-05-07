@@ -3,12 +3,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, FormView, ListView, UpdateView
+from django.views.generic.detail import SingleObjectMixin
 
 from core.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
 from core.mixins import StudentRequiredMixin, TeacherRequiredMixin
 
-from .forms import ProyectoForm, ProyectoRevisionForm
+from .forms import ComentarioForm, ProyectoForm, ProyectoRevisionForm
 from .models import Proyecto
 
 
@@ -41,15 +42,28 @@ class ProyectoRoleMixin(LoginRequiredMixin):
         return super().dispatch(request, *args, **kwargs)
 
     def get_project_queryset(self):
-        queryset = Proyecto.objects.select_related('estudiante')
+        queryset = Proyecto.objects.select_related('estudiante').prefetch_related(
+            'comentarios__usuario'
+        )
         if self.is_docente():
             return queryset
         if self.is_estudiante():
             return queryset.filter(estudiante=self.request.user)
         return queryset.none()
 
-    def build_detail_context(self, proyecto):
+    def can_comment_project(self, proyecto):
+        if proyecto.comentarios_bloqueados:
+            return False
+        if self.is_docente():
+            return True
+        return self.is_estudiante() and proyecto.estudiante_id == self.request.user.id
+
+    def build_detail_context(self, proyecto, comentario_form=None):
         return {
+            'comentario_form': comentario_form
+            if comentario_form is not None
+            else ComentarioForm(proyecto=proyecto),
+            'can_comment': self.can_comment_project(proyecto),
             'can_edit': self.is_estudiante() and proyecto.estudiante_id == self.request.user.id,
             'can_review': self.is_docente(),
         }
@@ -80,7 +94,12 @@ class ProyectoDetailView(ProyectoRoleMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(self.build_detail_context(self.object))
+        context.update(
+            self.build_detail_context(
+                self.object,
+                comentario_form=kwargs.get('comentario_form'),
+            )
+        )
         return context
 
 
@@ -151,3 +170,55 @@ class ProyectoRevisionView(TeacherRequiredMixin, UpdateView):
 
     def get_success_url(self):
         return reverse('proyecto_detalle', kwargs={'pk': self.object.pk})
+
+
+class ComentarioCreateView(ProyectoRoleMixin, SingleObjectMixin, FormView):
+    model = Proyecto
+    form_class = ComentarioForm
+    template_name = 'proyectos/proyecto_detail.html'
+
+    def get_queryset(self):
+        return self.get_project_queryset()
+
+    def get(self, request, *args, **kwargs):
+        return redirect('proyecto_detalle', pk=kwargs['pk'])
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.can_comment_project(self.object):
+            messages.error(
+                request,
+                'No se pueden agregar comentarios a un proyecto aprobado.',
+            )
+            return redirect('proyecto_detalle', pk=self.object.pk)
+        return super().post(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['proyecto'] = self.object
+        return kwargs
+
+    def form_valid(self, form):
+        comentario = form.save(commit=False)
+        comentario.usuario = self.request.user
+        comentario.proyecto = self.object
+        comentario.save()
+
+        messages.success(self.request, 'Comentario registrado correctamente.')
+        return redirect('proyecto_detalle', pk=self.object.pk)
+
+    def form_invalid(self, form):
+        context = self.get_context_data(form=form, object=self.object)
+        context.update(self.build_detail_context(self.object, comentario_form=form))
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['proyecto'] = self.object
+        context.update(
+            self.build_detail_context(
+                self.object,
+                comentario_form=kwargs.get('form'),
+            )
+        )
+        return context

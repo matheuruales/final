@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from core.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
 
-from .models import Proyecto
+from .models import Comentario, Proyecto
 
 
 class ProyectoModelTests(TestCase):
@@ -112,3 +112,38 @@ class ProyectoViewsTests(TestCase):
         self.assertEqual(self.project.estado, Proyecto.Estado.APROBADO)
         self.assertEqual(str(self.project.calificacion), '4.50')
         self.assertIsNotNone(self.project.fecha_revision)
+
+    def test_approved_project_blocks_new_comments(self):
+        self.project.estado = Proyecto.Estado.APROBADO
+        self.project.save(update_fields=['estado'])
+        self.client.login(username='docente1', password='ClaveSegura123')
+
+        response = self.client.post(
+            reverse('proyecto_comentar', kwargs={'pk': self.project.pk}),
+            {'texto': 'Comentario bloqueado'},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('proyecto_detalle', kwargs={'pk': self.project.pk}),
+        )
+        self.assertEqual(Comentario.objects.count(), 0)
+
+    def test_invalid_file_extension_is_rejected(self):
+        self.client.login(username='estudiante1', password='ClaveSegura123')
+
+        response = self.client.post(
+            reverse('proyecto_crear'),
+            {
+                'titulo': 'Proyecto invalido',
+                'descripcion': 'Tiene un archivo no permitido',
+                'documento': self.make_file('script.exe'),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context['form'],
+            'documento',
+            'Solo se permiten archivos PDF, DOC o DOCX.',
+        )
