@@ -1,6 +1,8 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.urls import reverse
+
+from .constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
 
 
 class AuthenticationFlowTests(TestCase):
@@ -21,3 +23,11 @@ class AuthenticationFlowTests(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Bienvenido')
+
+
+class RoleBootstrapTests(TestCase):
+    def test_expected_groups_exist_after_migrate(self):
+        self.assertTrue(Group.objects.filter(name=ESTUDIANTE_GROUP).exists())
+        self.assertTrue(Group.objects.filter(name=DOCENTE_GROUP).exists())
+
+# Create your tests here.
