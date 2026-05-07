@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle del proyecto{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <a href="{% url 'proyecto_lista' %}" class="text-decoration-none small">&larr; Volver al listado</a>
+        <h1 class="h3 mt-2 mb-1">{{ proyecto.titulo }}</h1>
+        <p class="text-muted mb-0">
+            Registrado por {{ proyecto.estudiante.get_full_name|default:proyecto.estudiante.username }}
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {% if can_edit %}
+            <a href="{% url 'proyecto_editar' proyecto.pk %}" class="btn btn-outline-secondary">Editar</a>
+            <a href="{% url 'proyecto_eliminar' proyecto.pk %}" class="btn btn-outline-danger">Eliminar</a>
+        {% endif %}
+        {% if can_review %}
+            <a href="{% url 'proyecto_revision' proyecto.pk %}" class="btn btn-primary">Actualizar revision</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    {% if proyecto.estado == 'aprobado' %}
+                        <span class="badge text-bg-success">{{ proyecto.get_estado_display }}</span>
+                    {% elif proyecto.estado == 'en_revision' %}
+                        <span class="badge text-bg-warning">{{ proyecto.get_estado_display }}</span>
+                    {% elif proyecto.estado == 'rechazado' %}
+                        <span class="badge text-bg-danger">{{ proyecto.get_estado_display }}</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">{{ proyecto.get_estado_display }}</span>
+                    {% endif %}
+                    {% if proyecto.calificacion %}
+                        <span class="badge text-bg-dark">Calificacion: {{ proyecto.calificacion }}</span>
+                    {% endif %}
+                </div>
+
+                <h2 class="h5">Descripcion</h2>
+                <p class="mb-4">{{ proyecto.descripcion|linebreaksbr }}</p>
+
+                <div class="row g-3 small">
+                    <div class="col-md-6">
+                        <div class="text-muted">Fecha de envio</div>
+                        <div>{{ proyecto.fecha_envio|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted">Fecha de revision</div>
+                        <div>
+                            {% if proyecto.fecha_revision %}
+                                {{ proyecto.fecha_revision|date:"d/m/Y H:i" }}
+                            {% else %}
+                                Sin revision registrada
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted">Documento adjunto</div>
+                        <a href="{{ proyecto.documento.url }}" target="_blank" rel="noopener">Abrir documento</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Seguimiento</h2>
+                {% if can_review %}
+                    <p class="text-muted mb-0">
+                        Desde este detalle puedes revisar la informacion del proyecto y luego actualizar su estado o calificacion.
+                    </p>
+                {% else %}
+                    <p class="text-muted mb-0">
+                        Aqui puedes consultar el estado actual de tu proyecto y descargar el documento cargado.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
