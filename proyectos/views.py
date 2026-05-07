@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib import messages
+from django.core.mail import send_mail
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
@@ -204,7 +206,17 @@ class ComentarioCreateView(ProyectoRoleMixin, SingleObjectMixin, FormView):
         comentario.proyecto = self.object
         comentario.save()
 
-        messages.success(self.request, 'Comentario registrado correctamente.')
+        notification_sent = self.send_comment_notification(comentario)
+        if notification_sent:
+            messages.success(
+                self.request,
+                'Comentario registrado y notificacion enviada al estudiante.',
+            )
+        else:
+            messages.warning(
+                self.request,
+                'Comentario registrado, pero el estudiante no tiene un correo configurado.',
+            )
         return redirect('proyecto_detalle', pk=self.object.pk)
 
     def form_invalid(self, form):
@@ -222,3 +234,21 @@ class ComentarioCreateView(ProyectoRoleMixin, SingleObjectMixin, FormView):
             )
         )
         return context
+
+    def send_comment_notification(self, comentario):
+        email = comentario.proyecto.estudiante.email
+        if not email:
+            return False
+
+        send_mail(
+            subject=f'Nuevo comentario en tu proyecto: {comentario.proyecto.titulo}',
+            message=(
+                f'Se registro un nuevo comentario en tu proyecto "{comentario.proyecto.titulo}".\n\n'
+                f'Usuario: {comentario.usuario.get_full_name() or comentario.usuario.username}\n'
+                f'Fecha: {timezone.localtime(comentario.fecha).strftime("%d/%m/%Y %H:%M")}\n\n'
+                f'Comentario:\n{comentario.texto}'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+        )
+        return True
