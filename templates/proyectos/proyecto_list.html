@@ -12,14 +12,84 @@
             <p class="text-muted mb-0">Aqui puedes revisar los proyectos academicos registrados por los estudiantes.</p>
         {% endif %}
     </div>
-    {% if is_estudiante %}
-        <a href="{% url 'proyecto_crear' %}" class="btn btn-primary">Nuevo proyecto</a>
-    {% endif %}
+    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+        {% if is_estudiante %}
+            <a href="{% url 'proyecto_crear' %}" class="btn btn-primary">Nuevo proyecto</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label mb-1" for="id_q">Busqueda</label>
+                <input
+                    type="search"
+                    id="id_q"
+                    name="q"
+                    value="{{ filters.q }}"
+                    class="form-control"
+                    placeholder="Titulo, descripcion{% if is_docente %} o estudiante{% endif %}"
+                >
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label mb-1" for="id_estado">Estado</label>
+                <select id="id_estado" name="estado" class="form-select">
+                    <option value="">Todos</option>
+                    {% for value, label in estado_choices %}
+                        <option value="{{ value }}" {% if filters.estado == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if is_docente %}
+                <div class="col-12 col-md-3">
+                    <label class="form-label mb-1" for="id_estudiante">Estudiante</label>
+                    <select id="id_estudiante" name="estudiante" class="form-select">
+                        <option value="">Todos</option>
+                        {% for estudiante in estudiantes %}
+                            <option value="{{ estudiante.id }}" {% if filters.estudiante|stringformat:"s" == estudiante.id|stringformat:"s" %}selected{% endif %}>
+                                {{ estudiante.get_full_name|default:estudiante.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+            <div class="col-12 {% if is_docente %}col-md-2{% else %}col-md-5{% endif %} d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                <a href="{% url 'proyecto_lista' %}" class="btn btn-outline-secondary w-100">Limpiar</a>
+            </div>
+        </form>
+    </div>
 </div>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         {% if proyectos %}
+            <div class="px-4 py-3 border-bottom d-flex flex-column flex-md-row justify-content-between gap-2">
+                <div class="text-muted small">
+                    Mostrando {{ proyectos|length }} proyecto{{ proyectos|length|pluralize }}
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if filters.q %}
+                        <span class="badge text-bg-light border">Busqueda: "{{ filters.q }}"</span>
+                    {% endif %}
+                    {% if filters.estado %}
+                        {% for value, label in estado_choices %}
+                            {% if value == filters.estado %}
+                                <span class="badge text-bg-light border">Estado: {{ label }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% if is_docente and filters.estudiante %}
+                        {% for estudiante in estudiantes %}
+                            {% if filters.estudiante|stringformat:"s" == estudiante.id|stringformat:"s" %}
+                                <span class="badge text-bg-light border">Estudiante: {{ estudiante.get_full_name|default:estudiante.username }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">

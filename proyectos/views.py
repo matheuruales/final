@@ -1,7 +1,9 @@
 from django.conf import settings
 from django.contrib import messages
 from django.core.mail import send_mail
+from django.db.models import Q
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -53,6 +55,41 @@ class ProyectoRoleMixin(LoginRequiredMixin):
             return queryset.filter(estudiante=self.request.user)
         return queryset.none()
 
+    def get_list_filters(self):
+        estado = (self.request.GET.get('estado') or '').strip()
+        estudiante = (self.request.GET.get('estudiante') or '').strip()
+        query = (self.request.GET.get('q') or '').strip()
+        return {
+            'estado': estado,
+            'estudiante': estudiante,
+            'q': query,
+        }
+
+    def filter_projects_queryset(self, queryset):
+        filters = self.get_list_filters()
+        allowed_estados = {value for value, _ in Proyecto.Estado.choices}
+
+        if filters['estado'] in allowed_estados:
+            queryset = queryset.filter(estado=filters['estado'])
+
+        if self.is_docente() and filters['estudiante'].isdigit():
+            queryset = queryset.filter(estudiante_id=int(filters['estudiante']))
+
+        if filters['q']:
+            q = filters['q']
+            if self.is_docente():
+                queryset = queryset.filter(
+                    Q(titulo__icontains=q)
+                    | Q(descripcion__icontains=q)
+                    | Q(estudiante__username__icontains=q)
+                    | Q(estudiante__first_name__icontains=q)
+                    | Q(estudiante__last_name__icontains=q)
+                )
+            else:
+                queryset = queryset.filter(Q(titulo__icontains=q) | Q(descripcion__icontains=q))
+
+        return queryset
+
     def can_comment_project(self, proyecto):
         if proyecto.comentarios_bloqueados:
             return False
@@ -77,12 +114,23 @@ class ProyectoListView(ProyectoRoleMixin, ListView):
     context_object_name = 'proyectos'
 
     def get_queryset(self):
-        return self.get_project_queryset()
+        return self.filter_projects_queryset(self.get_project_queryset())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_estudiante'] = self.is_estudiante()
         context['is_docente'] = self.is_docente()
+        context['estado_choices'] = Proyecto.Estado.choices
+        context['filters'] = self.get_list_filters()
+
+        if self.is_docente():
+            User = get_user_model()
+            base_queryset = self.get_project_queryset()
+            context['estudiantes'] = (
+                User.objects.filter(proyectos__in=base_queryset)
+                .distinct()
+                .order_by('first_name', 'last_name', 'username')
+            )
         return context
 
 
