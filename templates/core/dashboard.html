@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Panel principal{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h3 mb-2">Bienvenido, {{ user.get_full_name|default:user.username }}</h1>
+                <p class="text-muted mb-0">
+                    Esta base deja listo el sistema de autenticacion, roles y el modelo principal para que el resto del equipo continue.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Acceso por rol</h2>
+                {% if user.groups.exists %}
+                    <ul class="list-group list-group-flush">
+                        {% for group in user.groups.all %}
+                            <li class="list-group-item px-0">{{ group.name }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Este usuario aun no tiene un grupo asignado desde admin.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Permisos esperados</h2>
+                {% if is_estudiante %}
+                    <p class="mb-0">Podra gestionar solo sus propios proyectos en la siguiente fase.</p>
+                {% elif is_docente %}
+                    <p class="mb-0">Podra revisar y calificar proyectos en la siguiente fase.</p>
+                {% else %}
+                    <p class="mb-0">Asigna el grupo Estudiante o Docente desde el panel administrativo.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
