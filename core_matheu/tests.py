@@ -29,5 +29,3 @@ class RoleBootstrapTests(TestCase):
     def test_expected_groups_exist_after_migrate(self):
         self.assertTrue(Group.objects.filter(name=ESTUDIANTE_GROUP).exists())
         self.assertTrue(Group.objects.filter(name=DOCENTE_GROUP).exists())
-
-# Create your tests here.

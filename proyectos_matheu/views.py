@@ -15,8 +15,8 @@ from django.views.generic.detail import SingleObjectMixin
 import csv
 import io
 
-from core.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
-from core.mixins import StudentRequiredMixin, TeacherRequiredMixin
+from core_matheu.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
+from core_matheu.mixins import StudentRequiredMixin, TeacherRequiredMixin
 
 from .forms import ComentarioForm, ProyectoForm, ProyectoRevisionForm
 from .models import Proyecto
@@ -34,7 +34,8 @@ class ProyectoRoleMixin(LoginRequiredMixin):
         return ESTUDIANTE_GROUP in self.get_group_names()
 
     def is_docente(self):
-        return DOCENTE_GROUP in self.get_group_names()
+        user = self.request.user
+        return DOCENTE_GROUP in self.get_group_names() or user.is_staff or user.is_superuser
 
     def has_project_role(self):
         return self.is_estudiante() or self.is_docente()
@@ -218,7 +219,7 @@ class ProyectoExportPdfView(ProyectoRoleMixin, View):
         elements.append(Paragraph('Reporte de proyectos academicos', styles['Title']))
         elements.append(
             Paragraph(
-                f'Generado: {timezone.localtime(timezone.now()).strftime(\"%d/%m/%Y %H:%M\")}',
+                f'Generado: {timezone.localtime(timezone.now()).strftime("%d/%m/%Y %H:%M")}',
                 styles['Normal'],
             )
         )

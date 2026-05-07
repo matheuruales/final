@@ -1,22 +1,28 @@
-# Sistema de Seguimiento de Proyectos Académicos (Django)
+# Sistema de Seguimiento de Proyectos Academicos - Matheu
 
-Aplicación Django para registrar proyectos académicos, gestionarlos por estados, permitir comentarios entre docentes/estudiantes y exportar listados.
+Proyecto Django del parcial final de electiva. El paquete principal se llama
+`seguimiento_proyectos_academicos_matheu` y las aplicaciones son `core_matheu`
+y `proyectos_matheu`.
 
 ## Requisitos
 
-- Python 3.11+ (recomendado)
+- Python 3.11+
 - Pip
 
-## Instalación
+## Instalacion
 
 ```bash
 python -m venv .venv
-# Windows (PowerShell)
-.venv\\Scripts\\Activate.ps1
-
+source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py createsuperuser
+```
+
+En Windows PowerShell usa:
+
+```powershell
+.venv\Scripts\Activate.ps1
 ```
 
 ## Ejecutar
@@ -25,63 +31,65 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Luego abre `http://127.0.0.1:8000/`.
+Abre `http://127.0.0.1:8000/`.
 
-## Roles (Estudiante / Docente)
+## Roles
 
-Los grupos `Estudiante` y `Docente` se crean automáticamente al ejecutar `migrate` (signal `post_migrate`).
-
-Asigna el grupo desde el panel admin:
+Los grupos `Estudiante` y `Docente` se crean automaticamente con las migraciones.
+Asigna usuarios a grupos desde el admin:
 
 - Admin: `http://127.0.0.1:8000/admin/`
-- Usuarios → selecciona usuario → “Grupos” → agrega `Estudiante` o `Docente`
+- Usuarios -> selecciona usuario -> Grupos -> agrega `Estudiante` o `Docente`
 
-## Funcionalidades principales
+Los usuarios `is_staff` o `is_superuser` tambien pueden actuar como
+Docente/Administrador para revisar, calificar, comentar, filtrar y exportar.
 
-- Login/Logout con protección de rutas.
-- Estudiante:
-  - Crea/edita/elimina sus propios proyectos.
-- Docente:
-  - Revisa proyectos, cambia estado y asigna calificación.
-- Comentarios:
-  - Se bloquean nuevos comentarios cuando el estado es **Aprobado**.
-  - Al crear comentario, se notifica por correo al estudiante.
-- Listado:
-  - Filtro por estado.
-  - Filtro por estudiante (solo docente).
-  - Búsqueda por texto (título/descripcion y, para docente, también estudiante).
-- Exportación:
-  - CSV y PDF del listado (respeta los filtros actuales).
+## Funcionalidades
 
-## Exportación (CSV/PDF)
+- Login y logout.
+- Estudiante: crea, actualiza y elimina solo sus propios proyectos.
+- Docente/Administrador: revisa proyectos, cambia estado y asigna calificacion.
+- Estados del proyecto: `enviado`, `revision`, `aprobado`.
+- Comentarios: registran usuario, fecha y texto.
+- Al crear un comentario se envia una notificacion por correo al estudiante.
+- Cuando el estado es `aprobado`, se bloquea la adicion de nuevos comentarios.
+- Filtros por estado, estudiante y busqueda de texto.
+- Exportacion de listados a CSV y PDF respetando los filtros activos.
 
-En el listado de proyectos (`/proyectos/`) se muestran los botones:
+## Correo
 
-- “Exportar CSV”
-- “Exportar PDF”
+En desarrollo se usa consola por defecto:
 
-Ambos usan los filtros actuales por querystring.
+```python
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+```
 
-## Emails (modo desarrollo)
+Para enviar correos reales configura variables de entorno:
 
-Por defecto el proyecto usa:
+```bash
+export EMAIL_HOST=smtp.example.com
+export EMAIL_PORT=587
+export EMAIL_USE_TLS=true
+export EMAIL_HOST_USER=usuario@example.com
+export EMAIL_HOST_PASSWORD=clave
+export DEFAULT_FROM_EMAIL=no-reply@example.com
+```
 
-- `EMAIL_BACKEND = django.core.mail.backends.console.EmailBackend`
+Si `EMAIL_HOST` esta presente, Django usa SMTP automaticamente.
 
-Esto imprime el contenido del correo en la consola al guardar un comentario.
+## Flujo de prueba manual
 
-Para usar SMTP real, cambia `EMAIL_BACKEND` y configura credenciales en `proyectos_academicos/settings.py`.
+1. Crea un usuario `estudiante1` con email y grupo `Estudiante`.
+2. Crea un usuario `docente1` con grupo `Docente`, o usa un usuario admin.
+3. Ingresa como estudiante y crea un proyecto con documento PDF/DOC/DOCX.
+4. Ingresa como docente/admin, filtra por estudiante o estado y revisa el proyecto.
+5. Agrega un comentario y verifica la notificacion en consola o SMTP.
+6. Cambia el estado a `aprobado` y confirma que ya no permite comentarios.
+7. Exporta el listado en CSV y PDF.
 
-## Usuarios de prueba (ejemplo)
+## Verificacion
 
-1) Crea dos usuarios desde admin (o con `createsuperuser` + admin):
-
-- `estudiante1` (con email configurado) → grupo `Estudiante`
-- `docente1` → grupo `Docente`
-
-2) Ingresa con cada rol y valida:
-
-- Estudiante crea un proyecto y lo ve en su listado.
-- Docente filtra por estudiante/estado, revisa y califica.
-- Exporta el listado a CSV/PDF.
-
+```bash
+python manage.py check
+python manage.py test
+```

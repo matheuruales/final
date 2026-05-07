@@ -9,7 +9,7 @@
             <div class="card-body p-4">
                 <h1 class="h3 mb-2">Bienvenido, {{ user.get_full_name|default:user.username }}</h1>
                 <p class="text-muted mb-0">
-                    Esta base deja listo el sistema de autenticacion, roles y el modelo principal para que el resto del equipo continue.
+                    Sistema de seguimiento de proyectos academicos con autenticacion, roles, comentarios y reportes.
                 </p>
             </div>
         </div>
@@ -37,13 +37,13 @@
             <div class="card-body">
                 <h2 class="h5">Permisos esperados</h2>
                 {% if is_estudiante %}
-                    <p class="mb-3">Podra gestionar solo sus propios proyectos en la siguiente fase.</p>
+                    <p class="mb-3">Puede crear, editar y eliminar solo sus propios proyectos.</p>
                     <a href="{% url 'proyecto_lista' %}" class="btn btn-primary btn-sm">Ir a mis proyectos</a>
                 {% elif is_docente %}
-                    <p class="mb-3">Podra revisar y calificar proyectos en la siguiente fase.</p>
+                    <p class="mb-3">Puede revisar proyectos, cambiar estados, calificar y exportar reportes.</p>
                     <a href="{% url 'proyecto_lista' %}" class="btn btn-primary btn-sm">Ver proyectos</a>
                 {% else %}
-                    <p class="mb-0">Asigna el grupo Estudiante o Docente desde el panel administrativo.</p>
+                    <p class="mb-0">Asigna el grupo Estudiante o Docente desde el panel administrativo. Los administradores tambien pueden revisar proyectos.</p>
                 {% endif %}
             </div>
         </div>

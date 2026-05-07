@@ -12,6 +12,8 @@ def group_required(*group_names):
         @login_required
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
+            if DOCENTE_GROUP in group_names and (request.user.is_staff or request.user.is_superuser):
+                return view_func(request, *args, **kwargs)
             if request.user.groups.filter(name__in=group_names).exists():
                 return view_func(request, *args, **kwargs)
 

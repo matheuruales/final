@@ -30,10 +30,8 @@
                 <div class="d-flex flex-wrap gap-2 mb-3">
                     {% if proyecto.estado == 'aprobado' %}
                         <span class="badge text-bg-success">{{ proyecto.get_estado_display }}</span>
-                    {% elif proyecto.estado == 'en_revision' %}
+                    {% elif proyecto.estado == 'revision' %}
                         <span class="badge text-bg-warning">{{ proyecto.get_estado_display }}</span>
-                    {% elif proyecto.estado == 'rechazado' %}
-                        <span class="badge text-bg-danger">{{ proyecto.get_estado_display }}</span>
                     {% else %}
                         <span class="badge text-bg-secondary">{{ proyecto.get_estado_display }}</span>
                     {% endif %}
