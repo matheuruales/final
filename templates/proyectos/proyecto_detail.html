@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load crispy_forms_tags %}
 
 {% block title %}Detalle del proyecto{% endblock %}
 
@@ -71,15 +72,38 @@
     <div class="col-lg-5">
         <div class="card border-0 shadow-sm">
             <div class="card-body">
-                <h2 class="h5">Seguimiento</h2>
-                {% if can_review %}
-                    <p class="text-muted mb-0">
-                        Desde este detalle puedes revisar la informacion del proyecto y luego actualizar su estado o calificacion.
-                    </p>
+                <h2 class="h5">Comentarios</h2>
+                {% if proyecto.comentarios_bloqueados %}
+                    <div class="alert alert-warning">
+                        El proyecto ya fue aprobado. No es posible agregar nuevos comentarios.
+                    </div>
+                {% elif can_comment %}
+                    <form method="post" action="{% url 'proyecto_comentar' proyecto.pk %}">
+                        {% csrf_token %}
+                        {{ comentario_form|crispy }}
+                        <button type="submit" class="btn btn-primary">Guardar comentario</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <h3 class="h5">Historial</h3>
+                {% if proyecto.comentarios.exists %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for comentario in proyecto.comentarios.all %}
+                            <div class="border rounded-3 p-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <strong>{{ comentario.usuario.get_full_name|default:comentario.usuario.username }}</strong>
+                                    <span class="text-muted small">{{ comentario.fecha|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <p class="mb-0 mt-2">{{ comentario.texto|linebreaksbr }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    <p class="text-muted mb-0">
-                        Aqui puedes consultar el estado actual de tu proyecto y descargar el documento cargado.
-                    </p>
+                    <p class="text-muted mb-0">Todavia no hay comentarios registrados para este proyecto.</p>
                 {% endif %}
             </div>
         </div>
