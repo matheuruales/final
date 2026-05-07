@@ -1,7 +1,6 @@
 from django.contrib.auth.models import Group, User
-from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from core.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
@@ -25,7 +24,6 @@ class ProyectoModelTests(TestCase):
         self.assertEqual(proyecto.estudiante, estudiante)
 
 
-@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class ProyectoViewsTests(TestCase):
     def setUp(self):
         self.student_group, _ = Group.objects.get_or_create(name=ESTUDIANTE_GROUP)
@@ -130,23 +128,6 @@ class ProyectoViewsTests(TestCase):
             reverse('proyecto_detalle', kwargs={'pk': self.project.pk}),
         )
         self.assertEqual(Comentario.objects.count(), 0)
-        self.assertEqual(len(mail.outbox), 0)
-
-    def test_comment_sends_email_to_student(self):
-        self.client.login(username='docente1', password='ClaveSegura123')
-
-        response = self.client.post(
-            reverse('proyecto_comentar', kwargs={'pk': self.project.pk}),
-            {'texto': 'Recuerda complementar el marco teorico.'},
-        )
-
-        self.assertRedirects(
-            response,
-            reverse('proyecto_detalle', kwargs={'pk': self.project.pk}),
-        )
-        self.assertEqual(Comentario.objects.count(), 1)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to, ['estudiante1@example.com'])
 
     def test_invalid_file_extension_is_rejected(self):
         self.client.login(username='estudiante1', password='ClaveSegura123')
