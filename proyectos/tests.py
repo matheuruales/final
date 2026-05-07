@@ -148,6 +148,23 @@ class ProyectoViewsTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ['estudiante1@example.com'])
 
+    def test_comment_without_student_email_does_not_send_notification(self):
+        self.project.estudiante.email = ''
+        self.project.estudiante.save(update_fields=['email'])
+        self.client.login(username='docente1', password='ClaveSegura123')
+
+        response = self.client.post(
+            reverse('proyecto_comentar', kwargs={'pk': self.project.pk}),
+            {'texto': 'Comentario sin destino de correo.'},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('proyecto_detalle', kwargs={'pk': self.project.pk}),
+        )
+        self.assertEqual(Comentario.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 0)
+
     def test_invalid_file_extension_is_rejected(self):
         self.client.login(username='estudiante1', password='ClaveSegura123')
 
