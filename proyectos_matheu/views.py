@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.contrib import messages
+from django.core.files.storage import default_storage
 from django.core.mail import send_mail
 from django.db.models import Q
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
-from django.http import FileResponse, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -19,7 +20,7 @@ from core_matheu.constants import DOCENTE_GROUP, ESTUDIANTE_GROUP
 from core_matheu.mixins import StudentRequiredMixin, TeacherRequiredMixin
 
 from .forms import ComentarioForm, ProyectoForm, ProyectoRevisionForm
-from .models import Proyecto
+from .models import DocumentoArchivo, Proyecto
 
 
 class ProyectoRoleMixin(LoginRequiredMixin):
@@ -441,3 +442,22 @@ class ComentarioCreateView(ProyectoRoleMixin, SingleObjectMixin, FormView):
             recipient_list=[email],
         )
         return True
+
+
+class MediaFileView(LoginRequiredMixin, View):
+    def get(self, request, path, *args, **kwargs):
+        if not Proyecto.objects.filter(documento=path).exists():
+            raise Http404('Documento no encontrado.')
+
+        try:
+            archivo = DocumentoArchivo.objects.get(name=path)
+            file_obj = default_storage.open(path, 'rb')
+        except DocumentoArchivo.DoesNotExist as exc:
+            raise Http404('Documento no encontrado.') from exc
+
+        return FileResponse(
+            file_obj,
+            content_type=archivo.content_type or 'application/octet-stream',
+            as_attachment=False,
+            filename=path.rsplit('/', 1)[-1],
+        )
