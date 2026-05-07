@@ -8,6 +8,7 @@ y `proyectos_matheu`.
 
 - Python 3.11+
 - Pip
+- Base Supabase/Postgres configurada en `.env`
 
 ## Instalacion
 
@@ -32,6 +33,25 @@ python manage.py runserver
 ```
 
 Abre `http://127.0.0.1:8000/`.
+
+## Base de datos Supabase
+
+El proyecto lee `.env` automaticamente. Para Supabase se usa `DATABASE_URL`
+con Session Pooler IPv4:
+
+```env
+DATABASE_URL=postgresql://postgres.iovdysmtsekdcnjtqzpb:...@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+No uses el host directo `db.iovdysmtsekdcnjtqzpb.supabase.co` en redes IPv4,
+porque ese endpoint solo publica IPv6 para este proyecto.
+
+Para aplicar migraciones en Supabase:
+
+```bash
+python manage.py migrate --noinput
+python manage.py showmigrations
+```
 
 ## Roles
 
