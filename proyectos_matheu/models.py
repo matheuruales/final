@@ -86,3 +86,17 @@ class Comentario(models.Model):
 
     def __str__(self):
         return f'Comentario de {self.usuario} en {self.proyecto}'
+
+
+class DocumentoArchivo(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    content = models.BinaryField()
+    content_type = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Archivo de documento'
+        verbose_name_plural = 'Archivos de documentos'
+
+    def __str__(self):
+        return self.name
