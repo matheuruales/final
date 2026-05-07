@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Proyectos{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Listado de proyectos</h1>
+        {% if is_estudiante %}
+            <p class="text-muted mb-0">Aqui puedes gestionar unicamente los proyectos registrados por tu usuario.</p>
+        {% else %}
+            <p class="text-muted mb-0">Aqui puedes revisar los proyectos academicos registrados por los estudiantes.</p>
+        {% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+        {% if is_estudiante %}
+            <a href="{% url 'proyecto_crear' %}" class="btn btn-primary">Nuevo proyecto</a>
+        {% endif %}
+        <a
+            href="{% url 'proyecto_export_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+            class="btn btn-outline-secondary"
+        >
+            Exportar CSV
+        </a>
+        <a
+            href="{% url 'proyecto_export_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+            class="btn btn-outline-secondary"
+        >
+            Exportar PDF
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label mb-1" for="id_q">Busqueda</label>
+                <input
+                    type="search"
+                    id="id_q"
+                    name="q"
+                    value="{{ filters.q }}"
+                    class="form-control"
+                    placeholder="Titulo, descripcion{% if is_docente %} o estudiante{% endif %}"
+                >
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label mb-1" for="id_estado">Estado</label>
+                <select id="id_estado" name="estado" class="form-select">
+                    <option value="">Todos</option>
+                    {% for value, label in estado_choices %}
+                        <option value="{{ value }}" {% if filters.estado == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if is_docente %}
+                <div class="col-12 col-md-3">
+                    <label class="form-label mb-1" for="id_estudiante">Estudiante</label>
+                    <select id="id_estudiante" name="estudiante" class="form-select">
+                        <option value="">Todos</option>
+                        {% for estudiante in estudiantes %}
+                            <option value="{{ estudiante.id }}" {% if filters.estudiante|stringformat:"s" == estudiante.id|stringformat:"s" %}selected{% endif %}>
+                                {{ estudiante.get_full_name|default:estudiante.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+            <div class="col-12 {% if is_docente %}col-md-2{% else %}col-md-5{% endif %} d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                <a href="{% url 'proyecto_lista' %}" class="btn btn-outline-secondary w-100">Limpiar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if proyectos %}
+            <div class="px-4 py-3 border-bottom d-flex flex-column flex-md-row justify-content-between gap-2">
+                <div class="text-muted small">
+                    Mostrando {{ proyectos|length }} proyecto{{ proyectos|length|pluralize }}
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if filters.q %}
+                        <span class="badge text-bg-light border">Busqueda: "{{ filters.q }}"</span>
+                    {% endif %}
+                    {% if filters.estado %}
+                        {% for value, label in estado_choices %}
+                            {% if value == filters.estado %}
+                                <span class="badge text-bg-light border">Estado: {{ label }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% if is_docente and filters.estudiante %}
+                        {% for estudiante in estudiantes %}
+                            {% if filters.estudiante|stringformat:"s" == estudiante.id|stringformat:"s" %}
+                                <span class="badge text-bg-light border">Estudiante: {{ estudiante.get_full_name|default:estudiante.username }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Titulo</th>
+                            {% if is_docente %}
+                                <th>Estudiante</th>
+                            {% endif %}
+                            <th>Estado</th>
+                            <th>Fecha de envio</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proyecto in proyectos %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ proyecto.titulo }}</div>
+                                    <div class="text-muted small">{{ proyecto.descripcion|truncatechars:80 }}</div>
+                                </td>
+                                {% if is_docente %}
+                                    <td>{{ proyecto.estudiante.get_full_name|default:proyecto.estudiante.username }}</td>
+                                {% endif %}
+                                <td>
+                                    {% if proyecto.estado == 'aprobado' %}
+                                        <span class="badge text-bg-success">{{ proyecto.get_estado_display }}</span>
+                                    {% elif proyecto.estado == 'revision' %}
+                                        <span class="badge text-bg-warning">{{ proyecto.get_estado_display }}</span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">{{ proyecto.get_estado_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ proyecto.fecha_envio|date:"d/m/Y H:i" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'proyecto_detalle' proyecto.pk %}" class="btn btn-outline-primary btn-sm">Ver</a>
+                                    {% if is_estudiante %}
+                                        <a href="{% url 'proyecto_editar' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+                                        <a href="{% url 'proyecto_eliminar' proyecto.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+                                    {% endif %}
+                                    {% if is_docente %}
+                                        <a href="{% url 'proyecto_revision' proyecto.pk %}" class="btn btn-outline-secondary btn-sm">Revisar</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-4 text-center text-muted">
+                <p class="mb-3">Aun no hay proyectos registrados para mostrar.</p>
+                {% if is_estudiante %}
+                    <a href="{% url 'proyecto_crear' %}" class="btn btn-primary">Crear mi primer proyecto</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
