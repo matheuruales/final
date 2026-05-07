@@ -5,6 +5,8 @@ from .views import (
     ProyectoCreateView,
     ProyectoDeleteView,
     ProyectoDetailView,
+    ProyectoExportCsvView,
+    ProyectoExportPdfView,
     ProyectoListView,
     ProyectoRevisionView,
     ProyectoUpdateView,
@@ -12,6 +14,8 @@ from .views import (
 
 urlpatterns = [
     path('', ProyectoListView.as_view(), name='proyecto_lista'),
+    path('exportar/csv/', ProyectoExportCsvView.as_view(), name='proyecto_export_csv'),
+    path('exportar/pdf/', ProyectoExportPdfView.as_view(), name='proyecto_export_pdf'),
     path('crear/', ProyectoCreateView.as_view(), name='proyecto_crear'),
     path('<int:pk>/', ProyectoDetailView.as_view(), name='proyecto_detalle'),
     path('<int:pk>/editar/', ProyectoUpdateView.as_view(), name='proyecto_editar'),
